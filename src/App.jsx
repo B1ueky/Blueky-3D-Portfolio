@@ -18,10 +18,23 @@ const CAMERA_POSITIONS = {
 function CameraController({ section }) {
   const { camera } = useThree();
   const target = CAMERA_POSITIONS[section] || CAMERA_POSITIONS.home;
+  const arrived = useRef(false);
+  const prevSection = useRef(section);
 
   useFrame(() => {
-    const speed = section === 'contact' ? 0.05 : 0.02;
+    if (prevSection.current !== section) {
+      arrived.current = false;
+      prevSection.current = section;
+    }
+
+    if (arrived.current) return;
+
+    const speed = section === 'contact' ? 0.05 : 0.03;
     camera.position.lerp(target, speed);
+
+    if (camera.position.distanceTo(target) < 0.05) {
+      arrived.current = true;
+    }
   });
 
   return null;
