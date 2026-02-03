@@ -1,0 +1,53 @@
+@import "tailwindcss";
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background: #000;
+  overflow-x: hidden;
+}
+
+/* 天蓝色金属光泽文字 */
+.metallic-text {
+  background: linear-gradient(
+    135deg,
+    #5bcefa 0%,
+    #a8e4f7 20%,
+    #e0f4fc 40%,
+    #87ceeb 55%,
+    #4db8db 70%,
+    #a8e4f7 85%,
+    #5bcefa 100%
+  );
+  background-size: 200% 200%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+  animation: metallic-shine 3s ease-in-out infinite;
+  filter: drop-shadow(0 0 8px rgba(91, 206, 250, 0.3));
+}
+
+@keyframes metallic-shine {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+/* 白色发光文字 */
+.glow-text {
+  color: rgba(255, 255, 255, 0.9);
+  text-shadow:
+    0 0 10px rgba(255, 255, 255, 0.4),
+    0 0 30px rgba(255, 255, 255, 0.15),
+    0 0 60px rgba(255, 255, 255, 0.05);
+}
