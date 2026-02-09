@@ -1,4 +1,4 @@
-import { useState, useCallback, useRef, useMemo } from 'react';
+import { useState, useCallback, useRef, useMemo, useEffect } from 'react';
 import { Canvas, useFrame, useThree } from '@react-three/fiber';
 import { OrbitControls, Environment } from '@react-three/drei';
 import { EffectComposer, Bloom, ChromaticAberration, Vignette } from '@react-three/postprocessing';
@@ -8,16 +8,26 @@ import Loader from './components/Loader';
 import Navbar from './components/Navbar';
 import ContactForm from './components/ContactForm';
 import { Model as SpaceStation } from './components/SpaceStation';
+import { Model as SpaceStationModules } from './components/SpaceStationModules';
 
 const CAMERA_POSITIONS = {
-  home: new THREE.Vector3(4, 10, -14),
-  lostfocus: new THREE.Vector3(10, 30, -35),
-  contact: new THREE.Vector3(6, 6, -7),
+  home: new THREE.Vector3(4, 5, -16),
+  projects: new THREE.Vector3(4, 5, -16),
+  lostfocus: new THREE.Vector3(10, 28, -35),
+  contact: new THREE.Vector3(4, 5, -8),
 };
 
-function CameraController({ section }) {
+const CAMERA_TARGETS = {
+  home: new THREE.Vector3(0, 0, 0),
+  projects: new THREE.Vector3(0, 0, 0),
+  lostfocus: new THREE.Vector3(0, 0, 0),
+  contact: new THREE.Vector3(6, 0, 0),
+};
+
+function CameraController({ section, controlsRef }) {
   const { camera } = useThree();
-  const target = CAMERA_POSITIONS[section] || CAMERA_POSITIONS.home;
+  const posTarget = CAMERA_POSITIONS[section] || CAMERA_POSITIONS.home;
+  const lookTarget = CAMERA_TARGETS[section] || CAMERA_TARGETS.home;
   const arrived = useRef(false);
   const prevSection = useRef(section);
 
@@ -27,12 +37,25 @@ function CameraController({ section }) {
       prevSection.current = section;
     }
 
+    // Projects: let OrbitControls handle everything freely
+    if (section === 'projects') {
+      arrived.current = true;
+      return;
+    }
+
     if (arrived.current) return;
 
     const speed = section === 'contact' ? 0.05 : 0.03;
-    camera.position.lerp(target, speed);
+    camera.position.lerp(posTarget, speed);
 
-    if (camera.position.distanceTo(target) < 0.05) {
+    // Sync OrbitControls position and target
+    if (controlsRef.current) {
+      controlsRef.current.object.position.copy(camera.position);
+      controlsRef.current.target.lerp(lookTarget, speed);
+      controlsRef.current.update();
+    }
+
+    if (camera.position.distanceTo(posTarget) < 0.1) {
       arrived.current = true;
     }
   });
@@ -114,6 +137,34 @@ function GlowingParticles({ count = 300 }) {
   return <points ref={meshRef} geometry={geometry} material={shaderMaterial} />;
 }
 
+function SydneyTime() {
+  const [time, setTime] = useState('');
+
+  useEffect(() => {
+    const update = () => {
+      setTime(
+        new Date().toLocaleTimeString('en-AU', {
+          timeZone: 'Australia/Sydney',
+          hour: '2-digit',
+          minute: '2-digit',
+          second: '2-digit',
+          hour12: true,
+        })
+      );
+    };
+    update();
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  return (
+    <div className="text-xs text-white/40 tracking-wide">
+      <span className="block text-white/25 uppercase mb-0.5">Sydney, AU</span>
+      {time}
+    </div>
+  );
+}
+
 function App() {
   const [loading, setLoading] = useState(true);
   const [section, setSection] = useState('home');
@@ -122,6 +173,7 @@ function App() {
     setLoading(false);
   }, []);
 
+  const controlsRef = useRef();
   const isLostFocus = section === 'lostfocus';
   const isContact = section === 'contact';
   const showHeroText = section === 'home';
@@ -133,7 +185,7 @@ function App() {
       {/* 3D Space Station - always full screen */}
       <div className="fixed inset-0 z-0">
         <Canvas
-          camera={{ position: [4, 10, -14], fov: 40 }}
+          camera={{ position: [4, 5, -16], fov: 45 }}
           gl={{
             antialias: true,
             toneMapping: THREE.ACESFilmicToneMapping,
@@ -150,8 +202,9 @@ function App() {
           <pointLight position={[-5, 0, -5]} intensity={0.6} color="#66ccaa" distance={20} />
           <pointLight position={[5, -2, 5]} intensity={0.5} color="#aaccff" distance={20} />
 
-          <CameraController section={section} />
+          <CameraController section={section} controlsRef={controlsRef} />
           <SpaceStation />
+          <SpaceStationModules position={[4, -4, 3]} scale={0.3} />
           <GlowingParticles />
 
           <EffectComposer>
@@ -175,13 +228,16 @@ function App() {
           </EffectComposer>
 
           <OrbitControls
+            ref={controlsRef}
             enableDamping
             dampingFactor={0.05}
             autoRotate
             autoRotateSpeed={isLostFocus ? 0.1 : 0.3}
             minDistance={5}
             maxDistance={50}
-            enabled={!isContact}
+            enableRotate={!isContact}
+            enableZoom={!isContact}
+            enablePan={!isContact}
           />
         </Canvas>
       </div>
@@ -233,6 +289,12 @@ function App() {
         }`}
       >
         <ContactForm />
+      </div>
+
+      {/* Footer bar */}
+      <div className="fixed bottom-6 left-8 right-8 z-20 flex justify-between items-end pointer-events-none">
+        <SydneyTime />
+        <span className="text-xs text-white/40 tracking-wide">&copy; 2026 Blueky</span>
       </div>
 
       <main className="relative z-10">
